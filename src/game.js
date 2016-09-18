@@ -15,7 +15,7 @@ module.exports = exports = Game;
 function Game(screen, updateFunction, renderFunction) {
   this.update = updateFunction;
   this.render = renderFunction;
-
+  
   // Set up buffers
   this.frontBuffer = screen;
   this.frontCtx = screen.getContext('2d');

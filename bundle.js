@@ -7,6 +7,9 @@ const Player = require('./player.js');
 
 /* Global variables */
 var canvas = document.getElementById('screen');
+var background = new Image();
+background.src = encodeURI('assets/frogger_background.jpg');
+// var background = document.getElementById('assets/frogger_background.jpg');
 var game = new Game(canvas, update, render);
 var player = new Player({x: 0, y: 240})
 
@@ -43,8 +46,9 @@ function update(elapsedTime) {
   * @param {CanvasRenderingContext2D} ctx the context to render to
   */
 function render(elapsedTime, ctx) {
-  ctx.fillStyle = "lightblue";
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.drawImage(background, canvas.width, canvas.height);
+  // ctx.fillStyle = "lightblue";
+  // ctx.fillRect(0, 0, canvas.width, canvas.height);
   player.render(elapsedTime, ctx);
 }
 
@@ -66,7 +70,7 @@ module.exports = exports = Game;
 function Game(screen, updateFunction, renderFunction) {
   this.update = updateFunction;
   this.render = renderFunction;
-
+  
   // Set up buffers
   this.frontBuffer = screen;
   this.frontCtx = screen.getContext('2d');
