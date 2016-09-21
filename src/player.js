@@ -19,7 +19,7 @@ function Player(position) {
   this.width  = 64;
   this.height = 64;
   this.spritesheet  = new Image();
-  this.spritesheet.src = encodeURI('assets/PlayerSprite2.png');
+  this.spritesheet.src = encodeURI('assets/player_sprites/PlayerSprite0.png');
   this.timer = 0;
   this.frame = 0;
 }

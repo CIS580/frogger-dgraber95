@@ -8,8 +8,8 @@ const Player = require('./player.js');
 /* Global variables */
 var canvas = document.getElementById('screen');
 var background = new Image();
-background.src = encodeURI('assets/frogger_background.jpg');
-// var background = document.getElementById('assets/frogger_background.jpg');
+background.src = 'assets/background_assets/frogger_background.jpg';
+
 var game = new Game(canvas, update, render);
 var player = new Player({x: 0, y: 240})
 
@@ -46,7 +46,7 @@ function update(elapsedTime) {
   * @param {CanvasRenderingContext2D} ctx the context to render to
   */
 function render(elapsedTime, ctx) {
-  ctx.drawImage(background, canvas.width, canvas.height);
+  ctx.drawImage(background, 0, 0, canvas.width, canvas.height);
   // ctx.fillStyle = "lightblue";
   // ctx.fillRect(0, 0, canvas.width, canvas.height);
   player.render(elapsedTime, ctx);
@@ -132,7 +132,7 @@ function Player(position) {
   this.width  = 64;
   this.height = 64;
   this.spritesheet  = new Image();
-  this.spritesheet.src = encodeURI('assets/PlayerSprite2.png');
+  this.spritesheet.src = encodeURI('assets/player_sprites/PlayerSprite0.png');
   this.timer = 0;
   this.frame = 0;
 }
