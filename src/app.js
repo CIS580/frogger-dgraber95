@@ -3,6 +3,7 @@
 /* Classes */
 const Game = require('./game.js');
 const Player = require('./player.js');
+const Vehicle = require('./vehicle.js');
 
 /* Global variables */
 var canvas = document.getElementById('screen');
@@ -10,8 +11,45 @@ var background = new Image();
 background.src = 'assets/background_assets/frogger_background.jpg';
 
 var game = new Game(canvas, update, render);
-var player = new Player({x: 0, y: 240})
+var player = new Player({x: 8, y: 240})
+var vehicle = new Vehicle(0);
 
+window.onkeydown = function(event) {
+  switch(event.keyCode) {
+    // RIGHT
+    case 39:
+    case 68:
+      if(player.state == "idle") {
+        player.state = "right";
+        player.frame = -1;
+      }
+      break;
+    // LEFT
+    case 37:
+    case 65:
+      if(player.state == "idle") {
+        player.state = "left";
+        player.frame = -1;
+      }
+      break;
+    // DOWN
+    case 40:
+    case 83:
+      if(player.state == "idle") {
+        player.state = "down";
+        player.frame = -1;
+      }
+      break;
+    // UP
+    case 38:
+    case 87:
+      if(player.state == "idle") {
+        player.state = "up";
+        player.frame = -1;
+      }
+      break;
+  }
+}
 /**
  * @function masterLoop
  * Advances the game in sync with the refresh rate of the screen
@@ -35,6 +73,7 @@ masterLoop(performance.now());
 function update(elapsedTime) {
   player.update(elapsedTime);
   // TODO: Update the game objects
+  vehicle.update();
 }
 
 /**
@@ -49,4 +88,5 @@ function render(elapsedTime, ctx) {
   // ctx.fillStyle = "lightblue";
   // ctx.fillRect(0, 0, canvas.width, canvas.height);
   player.render(elapsedTime, ctx);
+  vehicle.render(ctx);
 }

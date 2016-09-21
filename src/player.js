@@ -1,7 +1,9 @@
 "use strict";
 
 const MS_PER_FRAME = 1000/8;
-
+const MS_JUMP_FRAME = 1000/16;
+const PIXELS_PER_JUMP = 68;
+const NUM_JUMP_FRAMES = 4;
 /**
  * @module exports the Player class
  */
@@ -22,6 +24,7 @@ function Player(position) {
   this.spritesheet.src = encodeURI('assets/player_sprites/PlayerSprite0.png');
   this.timer = 0;
   this.frame = 0;
+  this.pixels_moved = 0;
 }
 
 /**
@@ -35,10 +38,76 @@ Player.prototype.update = function(time) {
       if(this.timer > MS_PER_FRAME) {
         this.timer = 0;
         this.frame += 1;
-        if(this.frame > 3) this.frame = 0;
+        if(this.frame > NUM_JUMP_FRAMES - 1) this.frame = 0;
       }
       break;
     // TODO: Implement your player's update by state
+
+
+    case "right":
+      this.timer += time;
+      this.pixels_moved += 4;
+      if(this.pixels_moved <= PIXELS_PER_JUMP)
+        this.x += 4;
+      if(this.timer >= MS_JUMP_FRAME && this.pixels_moved > PIXELS_PER_JUMP/NUM_JUMP_FRAMES) {
+        this.timer = 0;
+        this.frame += 1;
+        if(this.frame > NUM_JUMP_FRAMES - 1) {
+          this.pixels_moved = 0;
+          this.frame = 0;
+          this.state = "idle";
+        }
+      }
+      break;
+    case "left":
+      this.timer += time;
+      this.pixels_moved += 4;      
+      if(this.pixels_moved <= PIXELS_PER_JUMP)
+        this.x -= 4;
+      if(this.timer >= MS_JUMP_FRAME && this.pixels_moved > PIXELS_PER_JUMP/NUM_JUMP_FRAMES) {
+        this.timer = 0;
+        this.frame += 1;
+        if(this.frame > NUM_JUMP_FRAMES - 1) {
+          this.pixels_moved = 0;          
+          this.frame = 0;
+          this.state = "idle";
+        }
+      }
+      break;
+    case "down":
+      this.timer += time;
+      this.pixels_moved += 4;      
+      if(this.pixels_moved <= PIXELS_PER_JUMP)      
+        this.y += 4;
+      if(this.timer >= MS_JUMP_FRAME && this.pixels_moved > PIXELS_PER_JUMP/NUM_JUMP_FRAMES) {
+        this.timer = 0;
+        this.frame += 1;
+        if(this.frame > NUM_JUMP_FRAMES - 1) {
+          this.pixels_moved = 0;          
+          this.frame = 0;
+          this.state = "idle";
+        }
+      }
+      break;
+    case "up":
+      this.timer += time;
+      this.pixels_moved += 4;      
+      if(this.pixels_moved <= PIXELS_PER_JUMP)      
+        this.y -= 4;
+      if(this.timer >= MS_JUMP_FRAME && this.pixels_moved > PIXELS_PER_JUMP/NUM_JUMP_FRAMES) {
+        this.timer = 0;
+        this.frame += 1;
+        if(this.frame > NUM_JUMP_FRAMES - 1) {
+          this.pixels_moved = 0;          
+          this.frame = 0;
+          this.state = "idle";
+        }
+      }
+      break;
+    default:
+      this.state = "idle";   
+
+
   }
 }
 
@@ -59,6 +128,19 @@ Player.prototype.render = function(time, ctx) {
         this.x, this.y, this.width, this.height
       );
       break;
-    // TODO: Implement your player's redering according to state
+
+    case "right":
+    case "left":
+    case "down":
+    case "up":
+      ctx.drawImage(
+        //image
+        this.spritesheet,
+        //source rectangle
+        this.frame * 64, 0, this.width, this.height,
+        //destination rectangle
+        this.x, this.y, this.width, this.height
+      );
+      break;    
   }
 }
