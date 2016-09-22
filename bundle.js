@@ -5,6 +5,7 @@
 const Game = require('./game.js');
 const Player = require('./player.js');
 const Vehicle = require('./vehicle.js');
+const Lane = require('./lane.js');
 
 /* Global variables */
 var canvas = document.getElementById('screen');
@@ -12,8 +13,14 @@ var background = new Image();
 background.src = 'assets/background_assets/frogger_background.jpg';
 
 var game = new Game(canvas, update, render);
-var player = new Player({x: 8, y: 240})
-var vehicle = new Vehicle(0);
+var player = new Player({x: 4, y: 240});
+var lanes = [];
+for(var i = 0; i < 4; i ++) {
+  lanes.push(new Lane(i));
+}
+
+// var vehicle = new Vehicle(0, 100);
+var state = '';
 
 window.onkeydown = function(event) {
   switch(event.keyCode) {
@@ -42,13 +49,34 @@ window.onkeydown = function(event) {
       }
       break;
     // UP
-    case 38:
     case 87:
+      if(state == ''){
+        state = 'speed';
+      }
+      break;
+    case 38:
       if(player.state == "idle") {
         player.state = "up";
         player.frame = -1;
       }
       break;
+  }
+}
+
+window.onkeyup = function(event){
+  switch(event.keyCode){
+    case 87:
+    if(state =='speed')
+    {
+      speed_up();
+      state = '';
+    }
+  }
+}
+
+function speed_up(){
+  for(var i = 0; i < lanes.length; i++) {
+    lanes[i].speed += 1;
   }
 }
 /**
@@ -74,7 +102,10 @@ masterLoop(performance.now());
 function update(elapsedTime) {
   player.update(elapsedTime);
   // TODO: Update the game objects
-  vehicle.update();
+  // vehicle.update(elapsedTime);
+  for(var i = 0; i < lanes.length; i ++) {
+    lanes[i].update(elapsedTime);
+  }
 }
 
 /**
@@ -89,10 +120,12 @@ function render(elapsedTime, ctx) {
   // ctx.fillStyle = "lightblue";
   // ctx.fillRect(0, 0, canvas.width, canvas.height);
   player.render(elapsedTime, ctx);
-  vehicle.render(ctx);
+  for(var i = 0; i < lanes.length; i ++) {
+    lanes[i].render(ctx);
+  }
 }
 
-},{"./game.js":2,"./player.js":3,"./vehicle.js":4}],2:[function(require,module,exports){
+},{"./game.js":2,"./lane.js":3,"./player.js":4,"./vehicle.js":5}],2:[function(require,module,exports){
 "use strict";
 
 /**
@@ -151,11 +184,97 @@ Game.prototype.loop = function(newTime) {
 }
 
 },{}],3:[function(require,module,exports){
+/**
+ * @module exports the lane class
+ */
+module.exports = exports = Lane;
+
+/* Classes */
+const Vehicle = require('./vehicle.js');
+
+/**
+ * @constructor Lane
+ * Creates a new lane object
+ * @param {int} laneNum left lane number of this lane (0-3 left to right)
+ */
+function Lane(laneNum) {
+  this.wait = (Math.random() + 1) * 1000;
+  this.timer = 0;
+  this.vehicles = [];
+  this.laneNum = laneNum;
+  switch(laneNum){
+      case 0:
+        this.x = 76;
+        this.speed = 0.5;
+        break;
+      case 1:
+        this.x = 146;
+        this.speed = 1;
+        break;
+      case 2:
+        this.x = 216;
+        this.speed = 1;
+        break;        
+      case 3:
+        this.x = 286;
+        this.speed = 0.5;
+        break;
+  }
+}
+
+
+/**
+ * @function updates the Lane object
+ */
+Lane.prototype.update = function(elapsedTime) {
+    this.timer += elapsedTime;
+    var max_vehicles;
+    if(this.speed < 8) {
+        max_vehicles = 1;
+    }
+    else {
+        max_vehicles = (7-this.speed);
+    }
+
+    if(this.timer >= this.wait && this.vehicles.length <= max_vehicles) {
+        this.timer = 0;
+        var minimumWait = 400/elapsedTime/this.speed*100;
+        this.wait = (Math.random()*(5/this.speed)) * 1000 + minimumWait;
+        if(this.laneNum == 0 || this.laneNum == 1){
+            this.vehicles.push(new Vehicle(this, -380));
+        }
+        else{
+            this.vehicles.push(new Vehicle(this, 480));
+        }
+    }
+
+    for(var i = 0; i < this.vehicles.length; i++){
+        this.vehicles[i].update(elapsedTime, this.speed);
+    }
+
+    if(this.vehicles.length != 0 && this.vehicles[0].isOffScreen) {
+        this.vehicles.splice(0, 1);
+    }
+}
+
+/**
+ * @function renders the lane into the provided context
+ * {CanvasRenderingContext2D} ctx - the context to render into
+ */
+Lane.prototype.render = function(ctx) {
+  for(var i = 0; i < this.vehicles.length; i++){
+      this.vehicles[i].render(ctx);
+  }
+}
+
+},{"./vehicle.js":5}],4:[function(require,module,exports){
 "use strict";
 
 const MS_PER_FRAME = 1000/8;
-const MS_JUMP_FRAME = 1000/16;
-const PIXELS_PER_JUMP = 68;
+const MS_JUMP_FRAME = 1000/32;
+const PIXELS_PER_JUMP_H = 70;
+const PIXELS_PER_JUMP_V = 50;
+const PPF = 14;
 const NUM_JUMP_FRAMES = 4;
 /**
  * @module exports the Player class
@@ -187,6 +306,7 @@ function Player(position) {
 Player.prototype.update = function(time) {
   switch(this.state) {
     case "idle":
+      console.log("X: " + this.x + "    Y: " + this.y);
       this.timer += time;
       if(this.timer > MS_PER_FRAME) {
         this.timer = 0;
@@ -199,10 +319,10 @@ Player.prototype.update = function(time) {
 
     case "right":
       this.timer += time;
-      this.pixels_moved += 4;
-      if(this.pixels_moved <= PIXELS_PER_JUMP)
-        this.x += 4;
-      if(this.timer >= MS_JUMP_FRAME && this.pixels_moved > PIXELS_PER_JUMP/NUM_JUMP_FRAMES) {
+      this.pixels_moved += PPF;
+      if(this.pixels_moved <= PIXELS_PER_JUMP_H)
+        this.x += PPF;
+      if(this.timer >= MS_JUMP_FRAME && this.pixels_moved > PIXELS_PER_JUMP_H/NUM_JUMP_FRAMES) {
         this.timer = 0;
         this.frame += 1;
         if(this.frame > NUM_JUMP_FRAMES - 1) {
@@ -214,10 +334,10 @@ Player.prototype.update = function(time) {
       break;
     case "left":
       this.timer += time;
-      this.pixels_moved += 4;      
-      if(this.pixels_moved <= PIXELS_PER_JUMP)
-        this.x -= 4;
-      if(this.timer >= MS_JUMP_FRAME && this.pixels_moved > PIXELS_PER_JUMP/NUM_JUMP_FRAMES) {
+      this.pixels_moved += PPF;      
+      if(this.pixels_moved <= PIXELS_PER_JUMP_H)
+        this.x -= PPF;
+      if(this.timer >= MS_JUMP_FRAME && this.pixels_moved > PIXELS_PER_JUMP_H/NUM_JUMP_FRAMES) {
         this.timer = 0;
         this.frame += 1;
         if(this.frame > NUM_JUMP_FRAMES - 1) {
@@ -229,10 +349,10 @@ Player.prototype.update = function(time) {
       break;
     case "down":
       this.timer += time;
-      this.pixels_moved += 4;      
-      if(this.pixels_moved <= PIXELS_PER_JUMP)      
-        this.y += 4;
-      if(this.timer >= MS_JUMP_FRAME && this.pixels_moved > PIXELS_PER_JUMP/NUM_JUMP_FRAMES) {
+      this.pixels_moved += PPF;      
+      if(this.pixels_moved <= PIXELS_PER_JUMP_V)      
+        this.y += PPF;
+      if(this.timer >= MS_JUMP_FRAME && this.pixels_moved > PIXELS_PER_JUMP_V/NUM_JUMP_FRAMES) {
         this.timer = 0;
         this.frame += 1;
         if(this.frame > NUM_JUMP_FRAMES - 1) {
@@ -244,10 +364,10 @@ Player.prototype.update = function(time) {
       break;
     case "up":
       this.timer += time;
-      this.pixels_moved += 4;      
-      if(this.pixels_moved <= PIXELS_PER_JUMP)      
-        this.y -= 4;
-      if(this.timer >= MS_JUMP_FRAME && this.pixels_moved > PIXELS_PER_JUMP/NUM_JUMP_FRAMES) {
+      this.pixels_moved += PPF;      
+      if(this.pixels_moved <= PIXELS_PER_JUMP_V)      
+        this.y -= PPF;
+      if(this.timer >= MS_JUMP_FRAME && this.pixels_moved > PIXELS_PER_JUMP_V/NUM_JUMP_FRAMES) {
         this.timer = 0;
         this.frame += 1;
         if(this.frame > NUM_JUMP_FRAMES - 1) {
@@ -298,7 +418,7 @@ Player.prototype.render = function(time, ctx) {
   }
 }
 
-},{}],4:[function(require,module,exports){
+},{}],5:[function(require,module,exports){
 /**
  * @module exports the vehicle class
  */
@@ -310,15 +430,23 @@ module.exports = exports = Vehicle;
  * Creates a new vehicle object
  * @param {int} lane - lane number the vehicle belongs in (0 - 3, left to right)
  */
-function Vehicle(lane) {
+function Vehicle(lane, yPos) {
   this.newCarImage();
-  this.lane = lane;
-  switch(lane) {
+  this.laneNum = lane.laneNum;
+  this.y = yPos;
+  this.wait = (Math.random() + 0.5) * 1000;
+  this.isOffScreen = false;
+  this.x = lane.x;
+  this.speed = lane.speed;
+  switch(this.laneNum) {
       case 0:
-        this.x = 76;
-        this.y = 0 - this.height;
+      case 1:
         this.draw_x = this.img_width/2;
         break;
+      case 2:
+      case 3:
+        this.draw_x = 0;
+        break;        
   }
 }
 
@@ -354,24 +482,23 @@ Vehicle.prototype.newCarImage = function() {
 /**
  * @function updates the Vehicle object
  */
-Vehicle.prototype.update = function() {
-  switch(this.lane){
+Vehicle.prototype.update = function(elapsedTime, speed) {
+  this.speed = speed;
+  switch(this.laneNum){
     case 0:
     case 1:
         if(this.y > 480 + this.height) {
-            this.newCarImage();
-            this.y = 0 - this.height;
+            this.isOffScreen = true;
         } else {
-            this.y += 2;
+            this.y += this.speed;
         }
         break;
     case 2:
     case 3:
         if(this.y < 0 - this.height) {
-            this.newCarImage();
-            this.y = 480;
+            this.isOffScreen = true;
         } else {
-            this.y -= 2;
+            this.y -= this.speed;
         }
     break;
   }

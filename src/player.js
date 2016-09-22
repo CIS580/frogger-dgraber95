@@ -1,8 +1,10 @@
 "use strict";
 
 const MS_PER_FRAME = 1000/8;
-const MS_JUMP_FRAME = 1000/16;
-const PIXELS_PER_JUMP = 68;
+const MS_JUMP_FRAME = 1000/32;
+const PIXELS_PER_JUMP_H = 70;
+const PIXELS_PER_JUMP_V = 50;
+const PPF = 14;
 const NUM_JUMP_FRAMES = 4;
 /**
  * @module exports the Player class
@@ -34,6 +36,7 @@ function Player(position) {
 Player.prototype.update = function(time) {
   switch(this.state) {
     case "idle":
+      console.log("X: " + this.x + "    Y: " + this.y);
       this.timer += time;
       if(this.timer > MS_PER_FRAME) {
         this.timer = 0;
@@ -46,10 +49,10 @@ Player.prototype.update = function(time) {
 
     case "right":
       this.timer += time;
-      this.pixels_moved += 4;
-      if(this.pixels_moved <= PIXELS_PER_JUMP)
-        this.x += 4;
-      if(this.timer >= MS_JUMP_FRAME && this.pixels_moved > PIXELS_PER_JUMP/NUM_JUMP_FRAMES) {
+      this.pixels_moved += PPF;
+      if(this.pixels_moved <= PIXELS_PER_JUMP_H)
+        this.x += PPF;
+      if(this.timer >= MS_JUMP_FRAME && this.pixels_moved > PIXELS_PER_JUMP_H/NUM_JUMP_FRAMES) {
         this.timer = 0;
         this.frame += 1;
         if(this.frame > NUM_JUMP_FRAMES - 1) {
@@ -61,10 +64,10 @@ Player.prototype.update = function(time) {
       break;
     case "left":
       this.timer += time;
-      this.pixels_moved += 4;      
-      if(this.pixels_moved <= PIXELS_PER_JUMP)
-        this.x -= 4;
-      if(this.timer >= MS_JUMP_FRAME && this.pixels_moved > PIXELS_PER_JUMP/NUM_JUMP_FRAMES) {
+      this.pixels_moved += PPF;      
+      if(this.pixels_moved <= PIXELS_PER_JUMP_H)
+        this.x -= PPF;
+      if(this.timer >= MS_JUMP_FRAME && this.pixels_moved > PIXELS_PER_JUMP_H/NUM_JUMP_FRAMES) {
         this.timer = 0;
         this.frame += 1;
         if(this.frame > NUM_JUMP_FRAMES - 1) {
@@ -76,10 +79,10 @@ Player.prototype.update = function(time) {
       break;
     case "down":
       this.timer += time;
-      this.pixels_moved += 4;      
-      if(this.pixels_moved <= PIXELS_PER_JUMP)      
-        this.y += 4;
-      if(this.timer >= MS_JUMP_FRAME && this.pixels_moved > PIXELS_PER_JUMP/NUM_JUMP_FRAMES) {
+      this.pixels_moved += PPF;      
+      if(this.pixels_moved <= PIXELS_PER_JUMP_V)      
+        this.y += PPF;
+      if(this.timer >= MS_JUMP_FRAME && this.pixels_moved > PIXELS_PER_JUMP_V/NUM_JUMP_FRAMES) {
         this.timer = 0;
         this.frame += 1;
         if(this.frame > NUM_JUMP_FRAMES - 1) {
@@ -91,10 +94,10 @@ Player.prototype.update = function(time) {
       break;
     case "up":
       this.timer += time;
-      this.pixels_moved += 4;      
-      if(this.pixels_moved <= PIXELS_PER_JUMP)      
-        this.y -= 4;
-      if(this.timer >= MS_JUMP_FRAME && this.pixels_moved > PIXELS_PER_JUMP/NUM_JUMP_FRAMES) {
+      this.pixels_moved += PPF;      
+      if(this.pixels_moved <= PIXELS_PER_JUMP_V)      
+        this.y -= PPF;
+      if(this.timer >= MS_JUMP_FRAME && this.pixels_moved > PIXELS_PER_JUMP_V/NUM_JUMP_FRAMES) {
         this.timer = 0;
         this.frame += 1;
         if(this.frame > NUM_JUMP_FRAMES - 1) {
