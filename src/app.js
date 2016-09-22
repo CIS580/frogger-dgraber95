@@ -5,6 +5,7 @@ const Game = require('./game.js');
 const Player = require('./player.js');
 const Vehicle = require('./vehicle.js');
 const Lane = require('./lane.js');
+const LogLane = require('./log_lane.js');
 
 /* Global variables */
 var canvas = document.getElementById('screen');
@@ -14,8 +15,10 @@ background.src = 'assets/background_assets/frogger_background.jpg';
 var game = new Game(canvas, update, render);
 var player = new Player({x: 4, y: 240});
 var lanes = [];
+var log_lanes = [];
 for(var i = 0; i < 4; i ++) {
   lanes.push(new Lane(i));
+  log_lanes.push(new LogLane(i));
 }
 
 // var vehicle = new Vehicle(0, 100);
@@ -76,6 +79,7 @@ window.onkeyup = function(event){
 function speed_up(){
   for(var i = 0; i < lanes.length; i++) {
     lanes[i].speed += 1;
+    log_lanes[i].speed += 1;
   }
 }
 /**
@@ -100,10 +104,10 @@ masterLoop(performance.now());
  */
 function update(elapsedTime) {
   player.update(elapsedTime);
-  // TODO: Update the game objects
-  // vehicle.update(elapsedTime);
+
   for(var i = 0; i < lanes.length; i ++) {
     lanes[i].update(elapsedTime);
+    log_lanes[i].update(elapsedTime);
   }
 }
 
@@ -116,10 +120,10 @@ function update(elapsedTime) {
   */
 function render(elapsedTime, ctx) {
   ctx.drawImage(background, 0, 0, canvas.width, canvas.height);
-  // ctx.fillStyle = "lightblue";
-  // ctx.fillRect(0, 0, canvas.width, canvas.height);
+
   player.render(elapsedTime, ctx);
   for(var i = 0; i < lanes.length; i ++) {
     lanes[i].render(ctx);
+    log_lanes[i].render(ctx);
   }
 }

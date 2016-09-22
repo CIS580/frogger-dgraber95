@@ -43,11 +43,11 @@ function Lane(laneNum) {
 Lane.prototype.update = function(elapsedTime) {
     this.timer += elapsedTime;
     var max_vehicles;
-    if(this.speed < 8) {
-        max_vehicles = 1;
+    if(this.speed < 9) {
+        max_vehicles = (7-this.speed);
     }
     else {
-        max_vehicles = (7-this.speed);
+        max_vehicles = 1;
     }
 
     if(this.timer >= this.wait && this.vehicles.length <= max_vehicles) {
@@ -55,7 +55,7 @@ Lane.prototype.update = function(elapsedTime) {
         var minimumWait = 400/elapsedTime/this.speed*100;
         this.wait = (Math.random()*(5/this.speed)) * 1000 + minimumWait;
         if(this.laneNum == 0 || this.laneNum == 1){
-            this.vehicles.push(new Vehicle(this, -380));
+            this.vehicles.push(new Vehicle(this, -150));
         }
         else{
             this.vehicles.push(new Vehicle(this, 480));
@@ -72,7 +72,7 @@ Lane.prototype.update = function(elapsedTime) {
 }
 
 /**
- * @function renders the lane into the provided context
+ * @function renders all vehicles in the car lane into the provided context
  * {CanvasRenderingContext2D} ctx - the context to render into
  */
 Lane.prototype.render = function(ctx) {

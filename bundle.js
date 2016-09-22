@@ -6,6 +6,7 @@ const Game = require('./game.js');
 const Player = require('./player.js');
 const Vehicle = require('./vehicle.js');
 const Lane = require('./lane.js');
+const LogLane = require('./log_lane.js');
 
 /* Global variables */
 var canvas = document.getElementById('screen');
@@ -15,8 +16,10 @@ background.src = 'assets/background_assets/frogger_background.jpg';
 var game = new Game(canvas, update, render);
 var player = new Player({x: 4, y: 240});
 var lanes = [];
+var log_lanes = [];
 for(var i = 0; i < 4; i ++) {
   lanes.push(new Lane(i));
+  log_lanes.push(new LogLane(i));
 }
 
 // var vehicle = new Vehicle(0, 100);
@@ -77,6 +80,7 @@ window.onkeyup = function(event){
 function speed_up(){
   for(var i = 0; i < lanes.length; i++) {
     lanes[i].speed += 1;
+    log_lanes[i].speed += 1;
   }
 }
 /**
@@ -101,10 +105,10 @@ masterLoop(performance.now());
  */
 function update(elapsedTime) {
   player.update(elapsedTime);
-  // TODO: Update the game objects
-  // vehicle.update(elapsedTime);
+
   for(var i = 0; i < lanes.length; i ++) {
     lanes[i].update(elapsedTime);
+    log_lanes[i].update(elapsedTime);
   }
 }
 
@@ -117,15 +121,15 @@ function update(elapsedTime) {
   */
 function render(elapsedTime, ctx) {
   ctx.drawImage(background, 0, 0, canvas.width, canvas.height);
-  // ctx.fillStyle = "lightblue";
-  // ctx.fillRect(0, 0, canvas.width, canvas.height);
+
   player.render(elapsedTime, ctx);
   for(var i = 0; i < lanes.length; i ++) {
     lanes[i].render(ctx);
+    log_lanes[i].render(ctx);
   }
 }
 
-},{"./game.js":2,"./lane.js":3,"./player.js":4,"./vehicle.js":5}],2:[function(require,module,exports){
+},{"./game.js":2,"./lane.js":3,"./log_lane.js":5,"./player.js":6,"./vehicle.js":7}],2:[function(require,module,exports){
 "use strict";
 
 /**
@@ -198,7 +202,7 @@ const Vehicle = require('./vehicle.js');
  * @param {int} laneNum left lane number of this lane (0-3 left to right)
  */
 function Lane(laneNum) {
-  this.wait = (Math.random() + 1) * 1000;
+  this.wait = 0;
   this.timer = 0;
   this.vehicles = [];
   this.laneNum = laneNum;
@@ -229,11 +233,11 @@ function Lane(laneNum) {
 Lane.prototype.update = function(elapsedTime) {
     this.timer += elapsedTime;
     var max_vehicles;
-    if(this.speed < 8) {
-        max_vehicles = 1;
+    if(this.speed < 9) {
+        max_vehicles = (7-this.speed);
     }
     else {
-        max_vehicles = (7-this.speed);
+        max_vehicles = 1;
     }
 
     if(this.timer >= this.wait && this.vehicles.length <= max_vehicles) {
@@ -241,7 +245,7 @@ Lane.prototype.update = function(elapsedTime) {
         var minimumWait = 400/elapsedTime/this.speed*100;
         this.wait = (Math.random()*(5/this.speed)) * 1000 + minimumWait;
         if(this.laneNum == 0 || this.laneNum == 1){
-            this.vehicles.push(new Vehicle(this, -380));
+            this.vehicles.push(new Vehicle(this, -150));
         }
         else{
             this.vehicles.push(new Vehicle(this, 480));
@@ -258,7 +262,7 @@ Lane.prototype.update = function(elapsedTime) {
 }
 
 /**
- * @function renders the lane into the provided context
+ * @function renders all vehicles in the car lane into the provided context
  * {CanvasRenderingContext2D} ctx - the context to render into
  */
 Lane.prototype.render = function(ctx) {
@@ -267,7 +271,164 @@ Lane.prototype.render = function(ctx) {
   }
 }
 
-},{"./vehicle.js":5}],4:[function(require,module,exports){
+},{"./vehicle.js":7}],4:[function(require,module,exports){
+/**
+ * @module exports the log class
+ */
+module.exports = exports = Log;
+
+
+/**
+ * @constructor Log
+ * Creates a new log object
+ * @param {int} lane - log lane number the log belongs in (0 - 3, left to right)
+ */
+function Log(lane, yPos) {
+  var log_number = Math.floor(Math.random() * 3);
+  this.spritesheet  = new Image();
+  this.spritesheet.src = 'assets/log/log_' + log_number + '.png';
+  switch(log_number) {
+      case 0:
+        this.img_height = 482;
+        break;
+      case 1:
+        this.img_height = 629;
+        break;
+      case 2:
+        this.img_height = 747;
+        break;
+  }
+  this.img_width = 180;
+  this.scaling_factor = (this.img_width)/64;
+  this.width  = (this.img_width)/this.scaling_factor;
+  this.height = this.img_height/this.scaling_factor;
+  this.laneNum = lane.laneNum;
+  this.y = yPos;
+  this.wait = (Math.random() + 0.5) * 1000;
+  this.isOffScreen = false;
+  this.x = lane.x;
+  this.speed = lane.speed;
+  switch(this.laneNum) {
+      case 0:
+      case 1:
+        this.draw_x = this.img_width/2;
+        break;
+      case 2:
+      case 3:
+        this.draw_x = 0;
+        break;        
+  }
+}
+
+/**
+ * @function updates the log object
+ */
+Log.prototype.update = function(elapsedTime, speed) {
+    this.speed = speed;
+    if(this.y > 480 + this.height) {
+        this.isOffScreen = true;
+    } else {
+        this.y += this.speed;
+    }
+}
+
+/**
+ * @function renders the log into the provided context
+ * {CanvasRenderingContext2D} ctx - the context to render into
+ */
+Log.prototype.render = function(ctx) {
+  ctx.drawImage(
+    //image
+    this.spritesheet,
+    //source rectangle
+    this.draw_x, 0, this.img_width, this.img_height,
+    //destination rectangle
+    this.x, this.y, this.width, this.height
+  );
+}
+
+},{}],5:[function(require,module,exports){
+/**
+ * @module exports the log lane class
+ */
+module.exports = exports = LogLane;
+
+/* Classes */
+const Log = require('./log.js');
+
+/**
+ * @constructor Lane
+ * Creates a new lane object
+ * @param {int} laneNum left lane number of this lane (0-3 left to right)
+ */
+function LogLane(laneNum) {
+  this.wait = 0;
+  this.timer = 0;
+  this.logs = [];
+  this.laneNum = laneNum;
+  this.speed = Math.random()+0.5;
+  switch(laneNum){
+      case 0:
+        this.x = 424;
+        break;
+      case 1:
+        this.x = 494;
+        break;
+      case 2:
+        this.x = 564;
+        break;        
+      case 3:
+        this.x = 634;
+        break;
+  }
+}
+
+
+/**
+ * @function updates the LogLane object
+ */
+LogLane.prototype.update = function(elapsedTime) {
+    this.timer += elapsedTime;
+    // var max_vehicles;
+    // if(this.speed < 8) {
+    //     max_vehicles = 1;
+    // }
+    // else {
+    //     max_vehicles = (7-this.speed);
+    // }
+
+    if(this.timer >= this.wait) {
+        this.timer = 0;
+        var minimumWait = 400/elapsedTime/this.speed*100;
+        this.wait = (Math.random()*(5/this.speed)) * 1000 + minimumWait;
+        if(this.laneNum == 0 || this.laneNum == 1){
+            this.logs.push(new Log(this, -380));
+        }
+        else{
+            this.logs.push(new Log(this, 480));
+        }
+    }
+
+    for(var i = 0; i < this.logs.length; i++){
+        this.logs[i].update(elapsedTime, this.speed);
+    }
+
+    if(this.logs.length != 0 && this.logs[0].isOffScreen) {
+        this.logs.splice(0, 1);
+    }
+}
+
+/**
+ * @function renders all logs in the log lane into the provided context
+ * {CanvasRenderingContext2D} ctx - the context to render into
+ */
+LogLane.prototype.render = function(ctx) {
+  for(var i = 0; i < this.logs.length; i++){
+      this.logs[i].render(ctx);
+  }
+}
+
+},{"./log.js":4}],6:[function(require,module,exports){
 "use strict";
 
 const MS_PER_FRAME = 1000/8;
@@ -418,7 +579,7 @@ Player.prototype.render = function(time, ctx) {
   }
 }
 
-},{}],5:[function(require,module,exports){
+},{}],7:[function(require,module,exports){
 /**
  * @module exports the vehicle class
  */
@@ -431,26 +592,6 @@ module.exports = exports = Vehicle;
  * @param {int} lane - lane number the vehicle belongs in (0 - 3, left to right)
  */
 function Vehicle(lane, yPos) {
-  this.newCarImage();
-  this.laneNum = lane.laneNum;
-  this.y = yPos;
-  this.wait = (Math.random() + 0.5) * 1000;
-  this.isOffScreen = false;
-  this.x = lane.x;
-  this.speed = lane.speed;
-  switch(this.laneNum) {
-      case 0:
-      case 1:
-        this.draw_x = this.img_width/2;
-        break;
-      case 2:
-      case 3:
-        this.draw_x = 0;
-        break;        
-  }
-}
-
-Vehicle.prototype.newCarImage = function() {
   var car_number = Math.floor(Math.random() * 11);
   this.spritesheet  = new Image();
   this.spritesheet.src = 'assets/cars/car_' + car_number + '.png';
@@ -477,6 +618,22 @@ Vehicle.prototype.newCarImage = function() {
   this.scaling_factor = (this.img_width/2)/64;
   this.width  = (this.img_width/2)/this.scaling_factor;
   this.height = this.img_height/this.scaling_factor;
+  this.laneNum = lane.laneNum;
+  this.y = yPos;
+  this.wait = (Math.random() + 0.5) * 1000;
+  this.isOffScreen = false;
+  this.x = lane.x;
+  this.speed = lane.speed;
+  switch(this.laneNum) {
+      case 0:
+      case 1:
+        this.draw_x = this.img_width/2;
+        break;
+      case 2:
+      case 3:
+        this.draw_x = 0;
+        break;        
+  }
 }
 
 /**

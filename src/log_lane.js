@@ -4,7 +4,7 @@
 module.exports = exports = LogLane;
 
 /* Classes */
-const LogLane = require('./log.js');
+const Log = require('./log.js');
 
 /**
  * @constructor Lane
@@ -19,16 +19,16 @@ function LogLane(laneNum) {
   this.speed = Math.random()+0.5;
   switch(laneNum){
       case 0:
-        this.x = 76;
+        this.x = 424;
         break;
       case 1:
-        this.x = 146;
+        this.x = 494;
         break;
       case 2:
-        this.x = 216;
+        this.x = 564;
         break;        
       case 3:
-        this.x = 286;
+        this.x = 634;
         break;
   }
 }
@@ -69,7 +69,7 @@ LogLane.prototype.update = function(elapsedTime) {
 }
 
 /**
- * @function renders the log lane into the provided context
+ * @function renders all logs in the log lane into the provided context
  * {CanvasRenderingContext2D} ctx - the context to render into
  */
 LogLane.prototype.render = function(ctx) {
