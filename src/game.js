@@ -29,6 +29,7 @@ function Game(screen, updateFunction, renderFunction) {
   this.paused = false;
 }
 
+
 /**
  * @function pause
  * Pause or unpause the game

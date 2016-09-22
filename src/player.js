@@ -34,7 +34,6 @@ function Player(position) {
  * {DOMHighResTimeStamp} time the elapsed time since the last frame
  */
 Player.prototype.update = function(time, entities) {
-  entities.updateEntity(this);
   switch(this.state) {
     case "idle":
       console.log("X: " + this.x + "    Y: " + this.y);
@@ -111,7 +110,7 @@ Player.prototype.update = function(time, entities) {
     default:
       this.state = "idle";   
 
-
+  entities.updateEntity(this);
   }
 }
 

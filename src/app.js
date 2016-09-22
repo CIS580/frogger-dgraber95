@@ -24,7 +24,12 @@ for(var i = 0; i < 4; i ++) {
   log_lanes.push(new LogLane(i));
 }
 
-// var vehicle = new Vehicle(0, 100);
+
+// window.onblur = function() {
+//    game.pause(true);
+// };
+
+
 var state = '';
 
 window.onkeydown = function(event) {
@@ -114,6 +119,9 @@ function update(elapsedTime) {
   }
 
   entities.collide(function(entity1, entity2) {
+    entity1.strokeStyle = '#ff0000';
+    entity2.strokeStyle = '#00FF00';
+    console.log(entity1, entity2)
     game.pause(true);
   });
 }
@@ -132,4 +140,6 @@ function render(elapsedTime, ctx) {
     log_lanes[i].render(ctx);
   }
   player.render(elapsedTime, ctx);
+  entities.renderCells(ctx);
+  entities.renderBoundingBoxes(ctx);
 }

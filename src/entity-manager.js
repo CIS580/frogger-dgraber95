@@ -1,36 +1,29 @@
 module.exports = exports = EntityManager;
 
 function EntityManager(width, height, cellSize) {
-  this.cellSize = cellSize;
+  this.laneSize = cellSize;
+  this.height = height;
   this.widthInCells = Math.ceil(width / cellSize);
-  this.heightInCells = Math.ceil(height / cellSize);
   this.cells = [];
-  this.numberOfCells = this.widthInCells * this.heightInCells;
-  for(var i = 0; i < this.numberOfCells; i++) {
+  for(var i = 0; i < this.widthInCells; i++) {
     this.cells[i] = [];
   }
   this.cells[-1] = [];
 }
 
-function getIndex(x, y) {
-  var x = Math.floor(x / this.cellSize);
-  var y = Math.floor(y / this.cellSize);
-  if(x < 0 ||
-     x >= this.widthInCells ||
-     y < 0 ||
-     y >= this.heightInCells
-  ) return -1;
-  return y * this.widthInCells + x;
+function getIndex(x) {
+  var x = Math.floor(x / this.laneSize);
+  return x;
 }
 
 EntityManager.prototype.addEntity = function(entity){
-  var index = getIndex.call(this, entity.x, entity.y);
+  var index = getIndex.call(this, entity.x);
   this.cells[index].push(entity);
   entity._cell = index;
 }
 
 EntityManager.prototype.updateEntity = function(entity){
-  var index = getIndex.call(this, entity.x, entity.y);
+  var index = getIndex.call(this, entity.x);
   // If we moved to a new cell, remove from old and add to new
   if(index != entity._cell) {
     if(this.cells[entity._cell] == undefined){
@@ -59,22 +52,8 @@ EntityManager.prototype.collide = function(callback) {
         if(entity1 != entity2) checkForCollision(entity1, entity2, callback);
 
         // check for collisions in cell to the right
-        if(i % (self.widthInCells - 1) != 0) {
+        if((i+1) % self.widthInCells != 0) {
           self.cells[i+1].forEach(function(entity2) {
-            checkForCollision(entity1, entity2, callback);
-          });
-        }
-
-        // check for collisions in cell below
-        if(i < self.numberOfCells - self.widthInCells) {
-          self.cells[i+self.widthInCells].forEach(function(entity2){
-            checkForCollision(entity1, entity2, callback);
-          });
-        }
-
-        // check for collisions diagionally below and right
-        if(i < self.numberOfCells - self.withInCells && i % (self.widthInCells - 1) != 0) {
-          self.cells[i+self.widthInCells + 1].forEach(function(entity2){
             checkForCollision(entity1, entity2, callback);
           });
         }
@@ -87,7 +66,11 @@ function checkForCollision(entity1, entity2, callback) {
   var collides = !(entity1.x + entity1.width < entity2.x ||
                    entity1.x > entity2.x + entity2.width ||
                    entity1.y + entity1.height < entity2.y ||
-                   entity1.y > entity2.y + entity2.height);
+                   entity1.y > entity2.y + entity2.height ||
+                   entity2.x + entity2.width < entity1.x ||
+                   entity2.x > entity1.x + entity1.width ||
+                   entity2.y + entity2.height < entity1.y ||
+                   entity2.y > entity1.y + entity1.height);
   if(collides) {
     callback(entity1, entity2);
   }
@@ -95,9 +78,17 @@ function checkForCollision(entity1, entity2, callback) {
 
 EntityManager.prototype.renderCells = function(ctx) {
   for(var x = 0; x < this.widthInCells; x++) {
-    for(var y = 0; y < this.heightInCells; y++) {
       ctx.strokeStyle = '#333333';
-      ctx.strokeRect(x * this.cellSize, y * this.cellSize, this.cellSize, this.cellSize);
-    }
+      ctx.strokeRect(x * this.laneSize, this.height, this.laneSize, this.height);
   }
+}
+
+EntityManager.prototype.renderBoundingBoxes = function(ctx){
+  
+  this.cells.forEach(function(cell){
+    cell.forEach(function(entity){
+      ctx.strokeStyle = entity.strokeStyle;
+      ctx.strokeRect(entity.x, entity.y, entity.width, entity.height);
+    });
+  });
 }
