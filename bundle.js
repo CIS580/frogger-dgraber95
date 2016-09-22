@@ -7,14 +7,17 @@ const Player = require('./player.js');
 const Vehicle = require('./vehicle.js');
 const Lane = require('./lane.js');
 const LogLane = require('./log_lane.js');
+const EntityManager = require('./entity-manager.js');
 
 /* Global variables */
 var canvas = document.getElementById('screen');
 var background = new Image();
 background.src = 'assets/background_assets/frogger_background.jpg';
 
+var entities = new EntityManager(canvas.width, canvas.height, 76);
 var game = new Game(canvas, update, render);
 var player = new Player({x: 4, y: 240});
+entities.addEntity(player);
 var lanes = [];
 var log_lanes = [];
 for(var i = 0; i < 4; i ++) {
@@ -54,7 +57,7 @@ window.onkeydown = function(event) {
     // UP
     case 87:
       if(state == ''){
-        state = 'speed';
+        game.pause(false);
       }
       break;
     case 38:
@@ -69,9 +72,9 @@ window.onkeydown = function(event) {
 window.onkeyup = function(event){
   switch(event.keyCode){
     case 87:
-    if(state =='speed')
+    if(state =='paused')
     {
-      speed_up();
+      game.pause(false);
       state = '';
     }
   }
@@ -104,12 +107,16 @@ masterLoop(performance.now());
  * the number of milliseconds passed since the last frame.
  */
 function update(elapsedTime) {
-  player.update(elapsedTime);
+  player.update(elapsedTime, entities);
 
   for(var i = 0; i < lanes.length; i ++) {
-    lanes[i].update(elapsedTime);
-    log_lanes[i].update(elapsedTime);
+    lanes[i].update(elapsedTime, entities);
+    log_lanes[i].update(elapsedTime, entities);
   }
+
+  entities.collide(function(entity1, entity2) {
+    game.pause(true);
+  });
 }
 
 /**
@@ -121,7 +128,6 @@ function update(elapsedTime) {
   */
 function render(elapsedTime, ctx) {
   ctx.drawImage(background, 0, 0, canvas.width, canvas.height);
-
   for(var i = 0; i < lanes.length; i ++) {
     lanes[i].render(ctx);
     log_lanes[i].render(ctx);
@@ -129,7 +135,112 @@ function render(elapsedTime, ctx) {
   player.render(elapsedTime, ctx);
 }
 
-},{"./game.js":2,"./lane.js":3,"./log_lane.js":5,"./player.js":6,"./vehicle.js":7}],2:[function(require,module,exports){
+},{"./entity-manager.js":2,"./game.js":3,"./lane.js":4,"./log_lane.js":6,"./player.js":7,"./vehicle.js":8}],2:[function(require,module,exports){
+module.exports = exports = EntityManager;
+
+function EntityManager(width, height, cellSize) {
+  this.cellSize = cellSize;
+  this.widthInCells = Math.ceil(width / cellSize);
+  this.heightInCells = Math.ceil(height / cellSize);
+  this.cells = [];
+  this.numberOfCells = this.widthInCells * this.heightInCells;
+  for(var i = 0; i < this.numberOfCells; i++) {
+    this.cells[i] = [];
+  }
+  this.cells[-1] = [];
+}
+
+function getIndex(x, y) {
+  var x = Math.floor(x / this.cellSize);
+  var y = Math.floor(y / this.cellSize);
+  if(x < 0 ||
+     x >= this.widthInCells ||
+     y < 0 ||
+     y >= this.heightInCells
+  ) return -1;
+  return y * this.widthInCells + x;
+}
+
+EntityManager.prototype.addEntity = function(entity){
+  var index = getIndex.call(this, entity.x, entity.y);
+  this.cells[index].push(entity);
+  entity._cell = index;
+}
+
+EntityManager.prototype.updateEntity = function(entity){
+  var index = getIndex.call(this, entity.x, entity.y);
+  // If we moved to a new cell, remove from old and add to new
+  if(index != entity._cell) {
+    if(this.cells[entity._cell] == undefined){
+      var stop = true;
+    }    
+    var cellIndex = this.cells[entity._cell].indexOf(entity);
+    if(cellIndex != -1) this.cells[entity._cell].splice(cellIndex, 1);
+    this.cells[index].push(entity);
+    entity._cell = index;
+  }
+}
+
+EntityManager.prototype.removeEntity = function(entity) {
+  var cellIndex = this.cells[entity._cell].indexOf(entity);
+  if(cellIndex != -1) this.cells[entity._cell].splice(cellIndex, 1);
+  entity._cell = undefined;
+}
+
+EntityManager.prototype.collide = function(callback) {
+  var self = this;
+  this.cells.forEach(function(cell, i) {
+    // test for collisions
+    cell.forEach(function(entity1) {
+      // check for collisions with cellmates
+      cell.forEach(function(entity2) {
+        if(entity1 != entity2) checkForCollision(entity1, entity2, callback);
+
+        // check for collisions in cell to the right
+        if(i % (self.widthInCells - 1) != 0) {
+          self.cells[i+1].forEach(function(entity2) {
+            checkForCollision(entity1, entity2, callback);
+          });
+        }
+
+        // check for collisions in cell below
+        if(i < self.numberOfCells - self.widthInCells) {
+          self.cells[i+self.widthInCells].forEach(function(entity2){
+            checkForCollision(entity1, entity2, callback);
+          });
+        }
+
+        // check for collisions diagionally below and right
+        if(i < self.numberOfCells - self.withInCells && i % (self.widthInCells - 1) != 0) {
+          self.cells[i+self.widthInCells + 1].forEach(function(entity2){
+            checkForCollision(entity1, entity2, callback);
+          });
+        }
+      });
+    });
+  });
+}
+
+function checkForCollision(entity1, entity2, callback) {
+  var collides = !(entity1.x + entity1.width < entity2.x ||
+                   entity1.x > entity2.x + entity2.width ||
+                   entity1.y + entity1.height < entity2.y ||
+                   entity1.y > entity2.y + entity2.height);
+  if(collides) {
+    callback(entity1, entity2);
+  }
+}
+
+EntityManager.prototype.renderCells = function(ctx) {
+  for(var x = 0; x < this.widthInCells; x++) {
+    for(var y = 0; y < this.heightInCells; y++) {
+      ctx.strokeStyle = '#333333';
+      ctx.strokeRect(x * this.cellSize, y * this.cellSize, this.cellSize, this.cellSize);
+    }
+  }
+}
+
+},{}],3:[function(require,module,exports){
 "use strict";
 
 /**
@@ -187,7 +298,7 @@ Game.prototype.loop = function(newTime) {
   this.frontCtx.drawImage(this.backBuffer, 0, 0);
 }
 
-},{}],3:[function(require,module,exports){
+},{}],4:[function(require,module,exports){
 /**
  * @module exports the lane class
  */
@@ -230,7 +341,7 @@ function Lane(laneNum) {
 /**
  * @function updates the Lane object
  */
-Lane.prototype.update = function(elapsedTime) {
+Lane.prototype.update = function(elapsedTime, entities) {
     this.timer += elapsedTime;
     var max_vehicles;
     if(this.speed < 9) {
@@ -243,20 +354,26 @@ Lane.prototype.update = function(elapsedTime) {
     if(this.timer >= this.wait && this.vehicles.length <= max_vehicles) {
         this.timer = 0;
         var minimumWait = 400/elapsedTime/this.speed*100;
-        this.wait = (Math.random()*(5/this.speed)) * 1000 + minimumWait;
+        this.wait = (Math.random()*(6/this.speed)) * 1000 + minimumWait;
         if(this.laneNum == 0 || this.laneNum == 1){
-            this.vehicles.push(new Vehicle(this, -150));
+            var new_vehicle = new Vehicle(this, -150);
+            this.vehicles.push(new_vehicle);
+            entities.addEntity(new_vehicle);
         }
         else{
-            this.vehicles.push(new Vehicle(this, 480));
+            var new_vehicle = new Vehicle(this, 480);
+            this.vehicles.push(new_vehicle);
+            entities.addEntity(new_vehicle);
         }
     }
 
     for(var i = 0; i < this.vehicles.length; i++){
         this.vehicles[i].update(elapsedTime, this.speed);
+        entities.updateEntity(this.vehicles[i]);
     }
 
     if(this.vehicles.length != 0 && this.vehicles[0].isOffScreen) {
+        entities.removeEntity(this.vehicles[0]);
         this.vehicles.splice(0, 1);
     }
 }
@@ -271,7 +388,7 @@ Lane.prototype.render = function(ctx) {
   }
 }
 
-},{"./vehicle.js":7}],4:[function(require,module,exports){
+},{"./vehicle.js":8}],5:[function(require,module,exports){
 /**
  * @module exports the log class
  */
@@ -298,10 +415,10 @@ function Log(lane, yPos) {
         this.img_height = 747;
         break;
   }
-  this.img_width = 360;
+  this.img_width = 128;
   this.scaling_factor = (this.img_width)/64;
   this.width  = (this.img_width)/this.scaling_factor;
-  this.height = this.img_height/this.scaling_factor;
+  this.height = this.img_height/this.scaling_factor/2;
   this.laneNum = lane.laneNum;
   this.y = yPos;
   this.isOffScreen = false;
@@ -314,11 +431,24 @@ function Log(lane, yPos) {
  */
 Log.prototype.update = function(elapsedTime, speed) {
     this.speed = speed;
-    if(this.y > 480 + this.height) {
-        this.isOffScreen = true;
-    } else {
-        this.y += this.speed;
-    }
+  switch(this.laneNum){
+    case 0:
+    case 2:
+        if(this.y > 480 + this.height) {
+            this.isOffScreen = true;
+        } else {
+            this.y += this.speed;
+        }
+        break;
+    case 1:
+    case 3:
+        if(this.y < 0 - this.height) {
+            this.isOffScreen = true;
+        } else {
+            this.y -= this.speed;
+        }
+    break;
+  }
 }
 
 /**
@@ -332,11 +462,11 @@ Log.prototype.render = function(ctx) {
     //source rectangle
     0, 0, this.img_width, this.img_height,
     //destination rectangle
-    this.x, this.y, this.width* 2, this.height
+    this.x, this.y, this.width, this.height
   );
 }
 
-},{}],5:[function(require,module,exports){
+},{}],6:[function(require,module,exports){
 /**
  * @module exports the log lane class
  */
@@ -376,21 +506,32 @@ function LogLane(laneNum) {
 /**
  * @function updates the LogLane object
  */
-LogLane.prototype.update = function(elapsedTime) {
+LogLane.prototype.update = function(elapsedTime, entities) {
     this.timer += elapsedTime;
 
     if(this.timer >= this.wait) {
         this.timer = 0;
-        var minimumWait = 400/elapsedTime/this.speed*100;
-        this.wait = (Math.random()*(5/this.speed)) * 1000 + minimumWait;
-        this.logs.push(new Log(this, -380));
+        var minimumWait = 800/elapsedTime/this.speed*100;
+        this.wait = (Math.random()*(3/this.speed)) * 1000 + minimumWait;
+        if(this.laneNum == 0 || this.laneNum == 2){
+            var new_log = new Log(this, -200);
+            this.logs.push(new_log);
+            entities.addEntity(new_log);
+        }
+        else{
+            var new_log = new Log(this, 480);
+            this.logs.push(new_log);
+            entities.addEntity(new_log);
+        }        
     }
 
     for(var i = 0; i < this.logs.length; i++){
         this.logs[i].update(elapsedTime, this.speed);
+        entities.updateEntity(this.logs[i]);
     }
 
     if(this.logs.length != 0 && this.logs[0].isOffScreen) {
+        entities.removeEntity(this.logs[0]);
         this.logs.splice(0, 1);
     }
 }
@@ -405,7 +546,7 @@ LogLane.prototype.render = function(ctx) {
   }
 }
 
-},{"./log.js":4}],6:[function(require,module,exports){
+},{"./log.js":5}],7:[function(require,module,exports){
 "use strict";
 
 const MS_PER_FRAME = 1000/8;
@@ -441,7 +582,8 @@ function Player(position) {
  * @function updates the player object
  * {DOMHighResTimeStamp} time the elapsed time since the last frame
  */
-Player.prototype.update = function(time) {
+Player.prototype.update = function(time, entities) {
+  entities.updateEntity(this);
   switch(this.state) {
     case "idle":
       console.log("X: " + this.x + "    Y: " + this.y);
@@ -556,7 +698,7 @@ Player.prototype.render = function(time, ctx) {
   }
 }
 
-},{}],7:[function(require,module,exports){
+},{}],8:[function(require,module,exports){
 /**
  * @module exports the vehicle class
  */

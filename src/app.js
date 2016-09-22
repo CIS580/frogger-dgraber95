@@ -6,14 +6,17 @@ const Player = require('./player.js');
 const Vehicle = require('./vehicle.js');
 const Lane = require('./lane.js');
 const LogLane = require('./log_lane.js');
+const EntityManager = require('./entity-manager.js');
 
 /* Global variables */
 var canvas = document.getElementById('screen');
 var background = new Image();
 background.src = 'assets/background_assets/frogger_background.jpg';
 
+var entities = new EntityManager(canvas.width, canvas.height, 76);
 var game = new Game(canvas, update, render);
 var player = new Player({x: 4, y: 240});
+entities.addEntity(player);
 var lanes = [];
 var log_lanes = [];
 for(var i = 0; i < 4; i ++) {
@@ -53,7 +56,7 @@ window.onkeydown = function(event) {
     // UP
     case 87:
       if(state == ''){
-        state = 'speed';
+        game.pause(false);
       }
       break;
     case 38:
@@ -68,9 +71,9 @@ window.onkeydown = function(event) {
 window.onkeyup = function(event){
   switch(event.keyCode){
     case 87:
-    if(state =='speed')
+    if(state =='paused')
     {
-      speed_up();
+      game.pause(false);
       state = '';
     }
   }
@@ -103,12 +106,16 @@ masterLoop(performance.now());
  * the number of milliseconds passed since the last frame.
  */
 function update(elapsedTime) {
-  player.update(elapsedTime);
+  player.update(elapsedTime, entities);
 
   for(var i = 0; i < lanes.length; i ++) {
-    lanes[i].update(elapsedTime);
-    log_lanes[i].update(elapsedTime);
+    lanes[i].update(elapsedTime, entities);
+    log_lanes[i].update(elapsedTime, entities);
   }
+
+  entities.collide(function(entity1, entity2) {
+    game.pause(true);
+  });
 }
 
 /**
@@ -120,7 +127,6 @@ function update(elapsedTime) {
   */
 function render(elapsedTime, ctx) {
   ctx.drawImage(background, 0, 0, canvas.width, canvas.height);
-
   for(var i = 0; i < lanes.length; i ++) {
     lanes[i].render(ctx);
     log_lanes[i].render(ctx);

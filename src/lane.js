@@ -40,7 +40,7 @@ function Lane(laneNum) {
 /**
  * @function updates the Lane object
  */
-Lane.prototype.update = function(elapsedTime) {
+Lane.prototype.update = function(elapsedTime, entities) {
     this.timer += elapsedTime;
     var max_vehicles;
     if(this.speed < 9) {
@@ -53,20 +53,26 @@ Lane.prototype.update = function(elapsedTime) {
     if(this.timer >= this.wait && this.vehicles.length <= max_vehicles) {
         this.timer = 0;
         var minimumWait = 400/elapsedTime/this.speed*100;
-        this.wait = (Math.random()*(5/this.speed)) * 1000 + minimumWait;
+        this.wait = (Math.random()*(6/this.speed)) * 1000 + minimumWait;
         if(this.laneNum == 0 || this.laneNum == 1){
-            this.vehicles.push(new Vehicle(this, -150));
+            var new_vehicle = new Vehicle(this, -150);
+            this.vehicles.push(new_vehicle);
+            entities.addEntity(new_vehicle);
         }
         else{
-            this.vehicles.push(new Vehicle(this, 480));
+            var new_vehicle = new Vehicle(this, 480);
+            this.vehicles.push(new_vehicle);
+            entities.addEntity(new_vehicle);
         }
     }
 
     for(var i = 0; i < this.vehicles.length; i++){
         this.vehicles[i].update(elapsedTime, this.speed);
+        entities.updateEntity(this.vehicles[i]);
     }
 
     if(this.vehicles.length != 0 && this.vehicles[0].isOffScreen) {
+        entities.removeEntity(this.vehicles[0]);
         this.vehicles.splice(0, 1);
     }
 }

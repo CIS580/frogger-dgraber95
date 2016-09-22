@@ -24,10 +24,10 @@ function Log(lane, yPos) {
         this.img_height = 747;
         break;
   }
-  this.img_width = 360;
+  this.img_width = 128;
   this.scaling_factor = (this.img_width)/64;
   this.width  = (this.img_width)/this.scaling_factor;
-  this.height = this.img_height/this.scaling_factor;
+  this.height = this.img_height/this.scaling_factor/2;
   this.laneNum = lane.laneNum;
   this.y = yPos;
   this.isOffScreen = false;
@@ -40,11 +40,24 @@ function Log(lane, yPos) {
  */
 Log.prototype.update = function(elapsedTime, speed) {
     this.speed = speed;
-    if(this.y > 480 + this.height) {
-        this.isOffScreen = true;
-    } else {
-        this.y += this.speed;
-    }
+  switch(this.laneNum){
+    case 0:
+    case 2:
+        if(this.y > 480 + this.height) {
+            this.isOffScreen = true;
+        } else {
+            this.y += this.speed;
+        }
+        break;
+    case 1:
+    case 3:
+        if(this.y < 0 - this.height) {
+            this.isOffScreen = true;
+        } else {
+            this.y -= this.speed;
+        }
+    break;
+  }
 }
 
 /**
@@ -58,6 +71,6 @@ Log.prototype.render = function(ctx) {
     //source rectangle
     0, 0, this.img_width, this.img_height,
     //destination rectangle
-    this.x, this.y, this.width* 2, this.height
+    this.x, this.y, this.width, this.height
   );
 }

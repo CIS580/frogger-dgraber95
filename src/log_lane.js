@@ -37,21 +37,32 @@ function LogLane(laneNum) {
 /**
  * @function updates the LogLane object
  */
-LogLane.prototype.update = function(elapsedTime) {
+LogLane.prototype.update = function(elapsedTime, entities) {
     this.timer += elapsedTime;
 
     if(this.timer >= this.wait) {
         this.timer = 0;
-        var minimumWait = 400/elapsedTime/this.speed*100;
-        this.wait = (Math.random()*(5/this.speed)) * 1000 + minimumWait;
-        this.logs.push(new Log(this, -380));
+        var minimumWait = 800/elapsedTime/this.speed*100;
+        this.wait = (Math.random()*(3/this.speed)) * 1000 + minimumWait;
+        if(this.laneNum == 0 || this.laneNum == 2){
+            var new_log = new Log(this, -200);
+            this.logs.push(new_log);
+            entities.addEntity(new_log);
+        }
+        else{
+            var new_log = new Log(this, 480);
+            this.logs.push(new_log);
+            entities.addEntity(new_log);
+        }        
     }
 
     for(var i = 0; i < this.logs.length; i++){
         this.logs[i].update(elapsedTime, this.speed);
+        entities.updateEntity(this.logs[i]);
     }
 
     if(this.logs.length != 0 && this.logs[0].isOffScreen) {
+        entities.removeEntity(this.logs[0]);
         this.logs.splice(0, 1);
     }
 }
