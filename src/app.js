@@ -79,7 +79,7 @@ window.onkeyup = function(event){
 function speed_up(){
   for(var i = 0; i < lanes.length; i++) {
     lanes[i].speed += 1;
-    log_lanes[i].speed += 1;
+    log_lanes[i].speed += 0.2;
   }
 }
 /**
@@ -121,9 +121,9 @@ function update(elapsedTime) {
 function render(elapsedTime, ctx) {
   ctx.drawImage(background, 0, 0, canvas.width, canvas.height);
 
-  player.render(elapsedTime, ctx);
   for(var i = 0; i < lanes.length; i ++) {
     lanes[i].render(ctx);
     log_lanes[i].render(ctx);
   }
+  player.render(elapsedTime, ctx);
 }

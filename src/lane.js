@@ -12,26 +12,26 @@ const Vehicle = require('./vehicle.js');
  * @param {int} laneNum left lane number of this lane (0-3 left to right)
  */
 function Lane(laneNum) {
-  this.wait = 0;
+  this.wait = 1200;
   this.timer = 0;
   this.vehicles = [];
   this.laneNum = laneNum;
   switch(laneNum){
       case 0:
         this.x = 76;
-        this.speed = 0.5;
+        this.speed = Math.random()*0.5 + 0.5;
         break;
       case 1:
         this.x = 146;
-        this.speed = 1;
+        this.speed = Math.random()*0.4 + 0.75;
         break;
       case 2:
         this.x = 216;
-        this.speed = 1;
+        this.speed = Math.random()*0.4 + 0.75;
         break;        
       case 3:
         this.x = 286;
-        this.speed = 0.5;
+        this.speed = Math.random()*0.5 + 0.5;
         break;
   }
 }

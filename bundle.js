@@ -80,7 +80,7 @@ window.onkeyup = function(event){
 function speed_up(){
   for(var i = 0; i < lanes.length; i++) {
     lanes[i].speed += 1;
-    log_lanes[i].speed += 1;
+    log_lanes[i].speed += 0.2;
   }
 }
 /**
@@ -122,11 +122,11 @@ function update(elapsedTime) {
 function render(elapsedTime, ctx) {
   ctx.drawImage(background, 0, 0, canvas.width, canvas.height);
 
-  player.render(elapsedTime, ctx);
   for(var i = 0; i < lanes.length; i ++) {
     lanes[i].render(ctx);
     log_lanes[i].render(ctx);
   }
+  player.render(elapsedTime, ctx);
 }
 
 },{"./game.js":2,"./lane.js":3,"./log_lane.js":5,"./player.js":6,"./vehicle.js":7}],2:[function(require,module,exports){
@@ -202,26 +202,26 @@ const Vehicle = require('./vehicle.js');
  * @param {int} laneNum left lane number of this lane (0-3 left to right)
  */
 function Lane(laneNum) {
-  this.wait = 0;
+  this.wait = 1200;
   this.timer = 0;
   this.vehicles = [];
   this.laneNum = laneNum;
   switch(laneNum){
       case 0:
         this.x = 76;
-        this.speed = 0.5;
+        this.speed = Math.random()*0.5 + 0.5;
         break;
       case 1:
         this.x = 146;
-        this.speed = 1;
+        this.speed = Math.random()*0.4 + 0.75;
         break;
       case 2:
         this.x = 216;
-        this.speed = 1;
+        this.speed = Math.random()*0.4 + 0.75;
         break;        
       case 3:
         this.x = 286;
-        this.speed = 0.5;
+        this.speed = Math.random()*0.5 + 0.5;
         break;
   }
 }
@@ -298,26 +298,15 @@ function Log(lane, yPos) {
         this.img_height = 747;
         break;
   }
-  this.img_width = 180;
+  this.img_width = 360;
   this.scaling_factor = (this.img_width)/64;
   this.width  = (this.img_width)/this.scaling_factor;
   this.height = this.img_height/this.scaling_factor;
   this.laneNum = lane.laneNum;
   this.y = yPos;
-  this.wait = (Math.random() + 0.5) * 1000;
   this.isOffScreen = false;
   this.x = lane.x;
   this.speed = lane.speed;
-  switch(this.laneNum) {
-      case 0:
-      case 1:
-        this.draw_x = this.img_width/2;
-        break;
-      case 2:
-      case 3:
-        this.draw_x = 0;
-        break;        
-  }
 }
 
 /**
@@ -341,9 +330,9 @@ Log.prototype.render = function(ctx) {
     //image
     this.spritesheet,
     //source rectangle
-    this.draw_x, 0, this.img_width, this.img_height,
+    0, 0, this.img_width, this.img_height,
     //destination rectangle
-    this.x, this.y, this.width, this.height
+    this.x, this.y, this.width* 2, this.height
   );
 }
 
@@ -362,7 +351,7 @@ const Log = require('./log.js');
  * @param {int} laneNum left lane number of this lane (0-3 left to right)
  */
 function LogLane(laneNum) {
-  this.wait = 0;
+  this.wait = 1500;
   this.timer = 0;
   this.logs = [];
   this.laneNum = laneNum;
@@ -389,24 +378,12 @@ function LogLane(laneNum) {
  */
 LogLane.prototype.update = function(elapsedTime) {
     this.timer += elapsedTime;
-    // var max_vehicles;
-    // if(this.speed < 8) {
-    //     max_vehicles = 1;
-    // }
-    // else {
-    //     max_vehicles = (7-this.speed);
-    // }
 
     if(this.timer >= this.wait) {
         this.timer = 0;
         var minimumWait = 400/elapsedTime/this.speed*100;
         this.wait = (Math.random()*(5/this.speed)) * 1000 + minimumWait;
-        if(this.laneNum == 0 || this.laneNum == 1){
-            this.logs.push(new Log(this, -380));
-        }
-        else{
-            this.logs.push(new Log(this, 480));
-        }
+        this.logs.push(new Log(this, -380));
     }
 
     for(var i = 0; i < this.logs.length; i++){

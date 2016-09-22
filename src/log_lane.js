@@ -12,7 +12,7 @@ const Log = require('./log.js');
  * @param {int} laneNum left lane number of this lane (0-3 left to right)
  */
 function LogLane(laneNum) {
-  this.wait = 0;
+  this.wait = 1500;
   this.timer = 0;
   this.logs = [];
   this.laneNum = laneNum;
@@ -39,24 +39,12 @@ function LogLane(laneNum) {
  */
 LogLane.prototype.update = function(elapsedTime) {
     this.timer += elapsedTime;
-    // var max_vehicles;
-    // if(this.speed < 8) {
-    //     max_vehicles = 1;
-    // }
-    // else {
-    //     max_vehicles = (7-this.speed);
-    // }
 
     if(this.timer >= this.wait) {
         this.timer = 0;
         var minimumWait = 400/elapsedTime/this.speed*100;
         this.wait = (Math.random()*(5/this.speed)) * 1000 + minimumWait;
-        if(this.laneNum == 0 || this.laneNum == 1){
-            this.logs.push(new Log(this, -380));
-        }
-        else{
-            this.logs.push(new Log(this, 480));
-        }
+        this.logs.push(new Log(this, -380));
     }
 
     for(var i = 0; i < this.logs.length; i++){

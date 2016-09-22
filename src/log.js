@@ -24,26 +24,15 @@ function Log(lane, yPos) {
         this.img_height = 747;
         break;
   }
-  this.img_width = 180;
+  this.img_width = 360;
   this.scaling_factor = (this.img_width)/64;
   this.width  = (this.img_width)/this.scaling_factor;
   this.height = this.img_height/this.scaling_factor;
   this.laneNum = lane.laneNum;
   this.y = yPos;
-  this.wait = (Math.random() + 0.5) * 1000;
   this.isOffScreen = false;
   this.x = lane.x;
   this.speed = lane.speed;
-  switch(this.laneNum) {
-      case 0:
-      case 1:
-        this.draw_x = this.img_width/2;
-        break;
-      case 2:
-      case 3:
-        this.draw_x = 0;
-        break;        
-  }
 }
 
 /**
@@ -67,8 +56,8 @@ Log.prototype.render = function(ctx) {
     //image
     this.spritesheet,
     //source rectangle
-    this.draw_x, 0, this.img_width, this.img_height,
+    0, 0, this.img_width, this.img_height,
     //destination rectangle
-    this.x, this.y, this.width, this.height
+    this.x, this.y, this.width* 2, this.height
   );
 }
