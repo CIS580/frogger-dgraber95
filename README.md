@@ -72,4 +72,10 @@ Water: https://goo.gl/images/ybXp5M
 
 Dirt: https://goo.gl/images/3va00X
 
+Frog (lives): https://goo.gl/images/x2tRfX
+
+Gravestone: https://goo.gl/images/VwRdik
+
+Log: https://goo.gl/images/IV3yYj
+
 Game framework HTML5/CSS3/Javascript code was written by course instructor Nathan Bean, and released under a CC-BY license.

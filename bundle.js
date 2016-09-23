@@ -1,74 +1,80 @@
 (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
 "use strict;"
 
+const COUNTDOWN = 2400;
+
 /* Classes */
 const Game = require('./game.js');
 const Player = require('./player.js');
 const Vehicle = require('./vehicle.js');
 const Lane = require('./lane.js');
 const LogLane = require('./log_lane.js');
-const EntityManager = require('./entity-manager.js');
 
 /* Global variables */
 var canvas = document.getElementById('screen');
 var background = new Image();
 background.src = 'assets/background_assets/frogger_background.jpg';
-
-var entities = new EntityManager(canvas.width, canvas.height, 76);
+var p_key = false;
+var state = 'ready';
+var countDown = COUNTDOWN;
+var level = 1;
+var gravestones = [];
+var gravestone = new Image()
+gravestone.src = 'assets/player_sprites/rip.png';
 var game = new Game(canvas, update, render);
 var player = new Player({x: 4, y: 240});
-entities.addEntity(player);
 var lanes = [];
 var log_lanes = [];
 for(var i = 0; i < 4; i ++) {
-  lanes.push(new Lane(i));
-  log_lanes.push(new LogLane(i));
+  lanes.push(new Lane(i, level));
+  log_lanes.push(new LogLane(i, level));
 }
-
-
-// window.onblur = function() {
-//    game.pause(true);
-// };
-
-
-var state = '';
 
 window.onkeydown = function(event) {
   switch(event.keyCode) {
     // RIGHT
     case 39:
     case 68:
-      if(player.state == "idle") {
-        player.state = "right";
+      event.preventDefault();
+      if(player.state == 'idle' && state == 'running') {
+        player.state = 'right';
         player.frame = -1;
       }
       break;
     // LEFT
     case 37:
     case 65:
-      if(player.state == "idle") {
-        player.state = "left";
+      event.preventDefault();
+      if(player.state == 'idle' && state == 'running') {
+        player.state = 'left';
         player.frame = -1;
       }
       break;
     // DOWN
     case 40:
     case 83:
-      if(player.state == "idle") {
-        player.state = "down";
+      event.preventDefault();
+      if(player.state == 'idle' && state == 'running') {
+        player.state = 'down';
         player.frame = -1;
       }
       break;
     // UP
     case 87:
-      if(state == ''){
-        game.pause(false);
+    case 38:
+      event.preventDefault();
+      if(player.state == 'idle' && state == 'running') {
+        player.state = 'up';
+        player.frame = -1;
       }
       break;
-    case 38:
-      if(player.state == "idle") {
-        player.state = "up";
-        player.frame = -1;
+    // P
+    case 80:
+      event.preventDefault();
+      if(!p_key){
+        p_key = true;
+        if(state == 'paused') state = 'running';
+        else if(state == 'running') state = 'paused';
       }
       break;
   }
@@ -76,21 +82,13 @@ window.onkeydown = function(event) {
 
 window.onkeyup = function(event){
   switch(event.keyCode){
-    case 87:
-    if(state =='paused')
-    {
-      game.pause(false);
-      state = '';
-    }
+    case 80:
+      p_key = false;
+      break;
   }
 }
 
-function speed_up(){
-  for(var i = 0; i < lanes.length; i++) {
-    lanes[i].speed += 1;
-    log_lanes[i].speed += 0.2;
-  }
-}
+
 /**
  * @function masterLoop
  * Advances the game in sync with the refresh rate of the screen
@@ -112,19 +110,102 @@ masterLoop(performance.now());
  * the number of milliseconds passed since the last frame.
  */
 function update(elapsedTime) {
-  player.update(elapsedTime, entities);
+  update:
+  switch(state) {
+    case 'ready': 
+        // Update logs & cars
+        countDown -= elapsedTime;
+        if(countDown <= 0){
+          countDown = COUNTDOWN;
+          state = 'running';
+        }
+        player.update(elapsedTime);
+        for(var i = 0; i < lanes.length; i ++) {
+          lanes[i].update(elapsedTime);
+          log_lanes[i].update(elapsedTime);
+        }
+      break;
 
-  for(var i = 0; i < lanes.length; i ++) {
-    lanes[i].update(elapsedTime, entities);
-    log_lanes[i].update(elapsedTime, entities);
+    case 'paused':
+      // display 'paused' + score
+      break;
+
+    case 'gameover':
+      for(var i = 0; i < lanes.length; i ++) {
+        lanes[i].update(elapsedTime);
+        log_lanes[i].update(elapsedTime);
+      }
+      // Display gameover & score
+      break;
+
+    case 'running': 
+      player.update(elapsedTime);
+
+      if(player.x < 0 || player.y + 20 < 0 || player.y + player.height > 480)
+      {
+        death();
+      }
+
+      // Check if player reached other side
+      if(player.lane >= 10)
+      {
+        level += 1;
+        state = 'ready';
+        for(var i = 0; i < lanes.length; i ++) {
+          lanes[i].increaseSpeed();
+          log_lanes[i].increaseSpeed();
+        }
+        player.restart();
+        break;
+      }
+
+      // Update logs & cars
+      for(var i = 0; i < lanes.length; i ++) {
+        lanes[i].update(elapsedTime);
+        log_lanes[i].update(elapsedTime);
+      }
+
+      // Check contact with cars
+      for(var i = 0; i < lanes.length; i ++) {
+        for(var j = 0; j < lanes[i].vehicles.length; j++)
+        {
+          if(player.isCollidingWithCar(lanes[i].vehicles[j])){
+            death();
+            break update;
+          }
+        }
+      }
+
+      // Check contact with logs
+      logs:
+      if(player.state == 'idle' && player.lane >= 6 && player.lane < 10){
+        for(var j = 0; j < log_lanes[player.lane - 6].logs.length; j++)
+        {
+          if(player.isRidingLog(log_lanes[player.lane - 6].logs[j])){
+            player.logSpeed = log_lanes[player.lane - 6].speed;
+            break logs;
+          }
+        }
+        death();
+      }
+      break;
   }
 
-  entities.collide(function(entity1, entity2) {
-    entity1.strokeStyle = '#ff0000';
-    entity2.strokeStyle = '#00FF00';
-    console.log(entity1, entity2)
-    game.pause(true);
-  });
+window.onblur = function(){
+  state = 'paused';
+}
+
+function death() {
+  player.lives -= 1;
+  gravestones.push({x: player.x, y: player.y});
+  if(player.lives == 0) state = 'gameover';
+  else {
+    state = 'ready';
+  }          
+  player.restart();
+}
+
+
 }
 
 /**
@@ -136,112 +217,64 @@ function update(elapsedTime) {
   */
 function render(elapsedTime, ctx) {
   ctx.drawImage(background, 0, 0, canvas.width, canvas.height);
+  for(var i = 0; i < gravestones.length; i++){
+    ctx.drawImage(gravestone, gravestones[i].x, gravestones[i].y, 30, 45);    
+  }
   for(var i = 0; i < lanes.length; i ++) {
     lanes[i].render(ctx);
     log_lanes[i].render(ctx);
   }
-  player.render(elapsedTime, ctx);
-  entities.renderCells(ctx);
-  entities.renderBoundingBoxes(ctx);
-}
-
-},{"./entity-manager.js":2,"./game.js":3,"./lane.js":4,"./log_lane.js":6,"./player.js":7,"./vehicle.js":8}],2:[function(require,module,exports){
-module.exports = exports = EntityManager;
-
-function EntityManager(width, height, cellSize) {
-  this.laneSize = cellSize;
-  this.height = height;
-  this.widthInCells = Math.ceil(width / cellSize);
-  this.cells = [];
-  for(var i = 0; i < this.widthInCells; i++) {
-    this.cells[i] = [];
+  if(state != 'gameover'){
+    player.render(elapsedTime, ctx);
+    if(state != 'paused'){
+      ctx.fillStyle = 'white';
+      ctx.font = "30px Lucida Console";
+      ctx.fillText("Score: " + (level - 1) * 100, 500, 470);      
+    }
   }
-  this.cells[-1] = [];
-}
-
-function getIndex(x) {
-  var x = Math.floor(x / this.laneSize);
-  return x;
-}
-
-EntityManager.prototype.addEntity = function(entity){
-  var index = getIndex.call(this, entity.x);
-  this.cells[index].push(entity);
-  entity._cell = index;
-}
-
-EntityManager.prototype.updateEntity = function(entity){
-  var index = getIndex.call(this, entity.x);
-  // If we moved to a new cell, remove from old and add to new
-  if(index != entity._cell) {
-    if(this.cells[entity._cell] == undefined){
-      var stop = true;
-    }    
-    var cellIndex = this.cells[entity._cell].indexOf(entity);
-    if(cellIndex != -1) this.cells[entity._cell].splice(cellIndex, 1);
-    this.cells[index].push(entity);
-    entity._cell = index;
+  if(state == 'gameover'){
+    ctx.globalAlpha = 0.6;
+    ctx.fillStyle = 'white';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.globalAlpha = 1;
+    ctx.font = "50px Lucida Console";
+		ctx.fillStyle = "red";
+		ctx.textAlign = "center";
+		ctx.fillText("GAME OVER", canvas.width/2, canvas.height/2); 
+		ctx.font = "25px Lucida Console";
+		ctx.fillStyle = "black";
+		ctx.fillText("Final Score: " + (level - 1) * 100, canvas.width/2, canvas.height/2 + 30);
   }
-}
-
-EntityManager.prototype.removeEntity = function(entity) {
-  var cellIndex = this.cells[entity._cell].indexOf(entity);
-  if(cellIndex != -1) this.cells[entity._cell].splice(cellIndex, 1);
-  entity._cell = undefined;
-}
-
-EntityManager.prototype.collide = function(callback) {
-  var self = this;
-  this.cells.forEach(function(cell, i) {
-    // test for collisions
-    cell.forEach(function(entity1) {
-      // check for collisions with cellmates
-      cell.forEach(function(entity2) {
-        if(entity1 != entity2) checkForCollision(entity1, entity2, callback);
-
-        // check for collisions in cell to the right
-        if((i+1) % self.widthInCells != 0) {
-          self.cells[i+1].forEach(function(entity2) {
-            checkForCollision(entity1, entity2, callback);
-          });
-        }
-      });
-    });
-  });
-}
-
-function checkForCollision(entity1, entity2, callback) {
-  var collides = !(entity1.x + entity1.width < entity2.x ||
-                   entity1.x > entity2.x + entity2.width ||
-                   entity1.y + entity1.height < entity2.y ||
-                   entity1.y > entity2.y + entity2.height ||
-                   entity2.x + entity2.width < entity1.x ||
-                   entity2.x > entity1.x + entity1.width ||
-                   entity2.y + entity2.height < entity1.y ||
-                   entity2.y > entity1.y + entity1.height);
-  if(collides) {
-    callback(entity1, entity2);
+  else if(state == 'paused'){
+    ctx.globalAlpha = 0.6;
+    ctx.fillStyle = 'white';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.globalAlpha = 1;
+    ctx.font = "50px Lucida Console";
+		ctx.fillStyle = "black";
+		ctx.textAlign = "center";
+		ctx.fillText("PAUSED", canvas.width/2, canvas.height/2); 
+		ctx.font = "25px Lucida Console";
+		ctx.fillStyle = "black";
+		ctx.fillText("Score: " + (level - 1) * 100, canvas.width/2, canvas.height/2 + 30);
   }
-}
-
-EntityManager.prototype.renderCells = function(ctx) {
-  for(var x = 0; x < this.widthInCells; x++) {
-      ctx.strokeStyle = '#333333';
-      ctx.strokeRect(x * this.laneSize, this.height, this.laneSize, this.height);
+  else if(state == 'ready'){
+    ctx.globalAlpha = 0.3;
+    ctx.fillStyle = 'white';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.globalAlpha = 1;
+    ctx.font = "50px Lucida Console";
+		ctx.fillStyle = "black";
+		ctx.textAlign = "center";
+		ctx.fillText(Math.ceil(countDown/800),  canvas.width/2, canvas.height/2); 
+		ctx.font = "25px Lucida Console";
+		ctx.fillStyle = "black";
+		ctx.fillText("Level: " + level, canvas.width/2, canvas.height/2 + 30);
   }
+
 }
 
-EntityManager.prototype.renderBoundingBoxes = function(ctx){
-  
-  this.cells.forEach(function(cell){
-    cell.forEach(function(entity){
-      ctx.strokeStyle = entity.strokeStyle;
-      ctx.strokeRect(entity.x, entity.y, entity.width, entity.height);
-    });
-  });
-}
-
-},{}],3:[function(require,module,exports){
+},{"./game.js":2,"./lane.js":3,"./log_lane.js":5,"./player.js":6,"./vehicle.js":7}],2:[function(require,module,exports){
 "use strict";
 
 /**
@@ -293,14 +326,14 @@ Game.prototype.loop = function(newTime) {
   var elapsedTime = newTime - this.oldTime;
   this.oldTime = newTime;
 
-  if(!this.paused) this.update(elapsedTime);
+  this.update(elapsedTime);
   this.render(elapsedTime, this.frontCtx);
 
   // Flip the back buffer
   this.frontCtx.drawImage(this.backBuffer, 0, 0);
 }
 
-},{}],4:[function(require,module,exports){
+},{}],3:[function(require,module,exports){
 /**
  * @module exports the lane class
  */
@@ -314,31 +347,38 @@ const Vehicle = require('./vehicle.js');
  * Creates a new lane object
  * @param {int} laneNum left lane number of this lane (0-3 left to right)
  */
-function Lane(laneNum) {
+function Lane(laneNum, level) {
   this.wait = 1200;
   this.timer = 0;
   this.vehicles = [];
   this.laneNum = laneNum;
   switch(laneNum){
       case 0:
-        this.x = 76;
+        this.x = 74;
         this.speed = Math.random()*0.5 + 0.5;
+        this.vehicles.push(new Vehicle(this, Math.random()*400))
         break;
       case 1:
-        this.x = 146;
-        this.speed = Math.random()*0.4 + 0.75;
+        this.x = 144;
+        this.speed = Math.random()*0.4 + 1;
+        this.vehicles.push(new Vehicle(this, Math.random()*400))        
         break;
       case 2:
-        this.x = 216;
-        this.speed = Math.random()*0.4 + 0.75;
+        this.x = 214;
+        this.speed = Math.random()*0.4 + 1;
+        this.vehicles.push(new Vehicle(this, Math.random()*400))        
         break;        
       case 3:
-        this.x = 286;
+        this.x = 284;
         this.speed = Math.random()*0.5 + 0.5;
+        this.vehicles.push(new Vehicle(this, Math.random()*400))        
         break;
   }
 }
 
+Lane.prototype.increaseSpeed = function() {
+    this.speed += 0.7;
+}
 
 /**
  * @function updates the Lane object
@@ -360,22 +400,18 @@ Lane.prototype.update = function(elapsedTime, entities) {
         if(this.laneNum == 0 || this.laneNum == 1){
             var new_vehicle = new Vehicle(this, -150);
             this.vehicles.push(new_vehicle);
-            entities.addEntity(new_vehicle);
         }
         else{
             var new_vehicle = new Vehicle(this, 480);
             this.vehicles.push(new_vehicle);
-            entities.addEntity(new_vehicle);
         }
     }
 
     for(var i = 0; i < this.vehicles.length; i++){
         this.vehicles[i].update(elapsedTime, this.speed);
-        entities.updateEntity(this.vehicles[i]);
     }
 
     if(this.vehicles.length != 0 && this.vehicles[0].isOffScreen) {
-        entities.removeEntity(this.vehicles[0]);
         this.vehicles.splice(0, 1);
     }
 }
@@ -390,7 +426,7 @@ Lane.prototype.render = function(ctx) {
   }
 }
 
-},{"./vehicle.js":8}],5:[function(require,module,exports){
+},{"./vehicle.js":7}],4:[function(require,module,exports){
 /**
  * @module exports the log class
  */
@@ -468,7 +504,7 @@ Log.prototype.render = function(ctx) {
   );
 }
 
-},{}],6:[function(require,module,exports){
+},{}],5:[function(require,module,exports){
 /**
  * @module exports the log lane class
  */
@@ -482,28 +518,35 @@ const Log = require('./log.js');
  * Creates a new lane object
  * @param {int} laneNum left lane number of this lane (0-3 left to right)
  */
-function LogLane(laneNum) {
+function LogLane(laneNum, level) {
   this.wait = 1500;
   this.timer = 0;
   this.logs = [];
   this.laneNum = laneNum;
-  this.speed = Math.random()+0.5;
+  this.speed = Math.random() + 0.5;
   switch(laneNum){
       case 0:
         this.x = 424;
+        this.logs.push(new Log(this, Math.random()*400));    
         break;
       case 1:
         this.x = 494;
+        this.logs.push(new Log(this, Math.random()*400));           
         break;
       case 2:
         this.x = 564;
+        this.logs.push(new Log(this, Math.random()*400));           
         break;        
       case 3:
         this.x = 634;
+        this.logs.push(new Log(this, Math.random()*400));           
         break;
   }
 }
 
+LogLane.prototype.increaseSpeed = function() {
+    this.speed += 0.3;
+}
 
 /**
  * @function updates the LogLane object
@@ -515,25 +558,23 @@ LogLane.prototype.update = function(elapsedTime, entities) {
         this.timer = 0;
         var minimumWait = 800/elapsedTime/this.speed*100;
         this.wait = (Math.random()*(3/this.speed)) * 1000 + minimumWait;
-        if(this.laneNum == 0 || this.laneNum == 2){
+        if((this.laneNum == 0 || this.laneNum == 2) && (this.logs.length == 0 || 
+            this.logs[this.logs.length - 1].y > 0)){
             var new_log = new Log(this, -200);
             this.logs.push(new_log);
-            entities.addEntity(new_log);
         }
-        else{
+        else if (this.laneNum == 1 || this.laneNum == 3 && this.logs.length == 0 || 
+            this.logs[this.logs.length - 1].y < 480 - this.logs[this.logs.length - 1].height){
             var new_log = new Log(this, 480);
             this.logs.push(new_log);
-            entities.addEntity(new_log);
         }        
     }
 
     for(var i = 0; i < this.logs.length; i++){
         this.logs[i].update(elapsedTime, this.speed);
-        entities.updateEntity(this.logs[i]);
     }
 
     if(this.logs.length != 0 && this.logs[0].isOffScreen) {
-        entities.removeEntity(this.logs[0]);
         this.logs.splice(0, 1);
     }
 }
@@ -548,7 +589,7 @@ LogLane.prototype.render = function(ctx) {
   }
 }
 
-},{"./log.js":5}],7:[function(require,module,exports){
+},{"./log.js":4}],6:[function(require,module,exports){
 "use strict";
 
 const MS_PER_FRAME = 1000/8;
@@ -573,11 +614,17 @@ function Player(position) {
   this.y = position.y;
   this.width  = 64;
   this.height = 64;
+  this.spriteNum = 0;
   this.spritesheet  = new Image();
   this.spritesheet.src = encodeURI('assets/player_sprites/PlayerSprite0.png');
   this.timer = 0;
   this.frame = 0;
   this.pixels_moved = 0;
+  this.lane = 0;
+  this.logSpeed = 0;
+  this.lives = 3;
+  this.livesImg = new Image();
+  this.livesImg.src = encodeURI('assets/player_sprites/lives.png');
 }
 
 /**
@@ -585,6 +632,20 @@ function Player(position) {
  * {DOMHighResTimeStamp} time the elapsed time since the last frame
  */
 Player.prototype.update = function(time, entities) {
+  switch(this.lane){
+    case 6:
+    case 8:
+      this.y += this.logSpeed;
+    break;
+
+    case 7:
+    case 9:
+      this.y -= this.logSpeed;
+    break;
+  }
+
+  if(this.state != "idle") this.logSpeed = 0;
+
   switch(this.state) {
     case "idle":
       console.log("X: " + this.x + "    Y: " + this.y);
@@ -597,7 +658,6 @@ Player.prototype.update = function(time, entities) {
       break;
     // TODO: Implement your player's update by state
 
-
     case "right":
       this.timer += time;
       this.pixels_moved += PPF;
@@ -607,6 +667,7 @@ Player.prototype.update = function(time, entities) {
         this.timer = 0;
         this.frame += 1;
         if(this.frame > NUM_JUMP_FRAMES - 1) {
+          this.lane += 1;
           this.pixels_moved = 0;
           this.frame = 0;
           this.state = "idle";
@@ -622,6 +683,7 @@ Player.prototype.update = function(time, entities) {
         this.timer = 0;
         this.frame += 1;
         if(this.frame > NUM_JUMP_FRAMES - 1) {
+          this.lane -= 1;
           this.pixels_moved = 0;          
           this.frame = 0;
           this.state = "idle";
@@ -659,10 +721,22 @@ Player.prototype.update = function(time, entities) {
       }
       break;
     default:
-      this.state = "idle";   
-
-  entities.updateEntity(this);
+      this.state = "idle";
   }
+}
+
+Player.prototype.isCollidingWithCar = function(vehicle) {
+  return !(this.x + this.width < vehicle.x ||
+                   this.x > vehicle.x +vehicle.width ||
+                   this.y + this.height - 10 < vehicle.y ||
+                   this.y + 24 > vehicle.y + vehicle.height);
+}
+
+Player.prototype.isRidingLog = function(log) {
+  return !(this.x + this.width < log.x ||
+                   this.x > log.x + log.width ||
+                   this.y + this.height - 20 < log.y ||
+                   this.y + 65 > log.y +log.height);
 }
 
 /**
@@ -671,15 +745,23 @@ Player.prototype.update = function(time, entities) {
  * {CanvasRenderingContext2D} ctx the context to render into
  */
 Player.prototype.render = function(time, ctx) {
+  ctx.drawImage(
+    // image
+    this.livesImg,
+    // source rectangle
+    831 * (3 - this.lives), 0, 831 * this.lives, 720,
+    // destination rectangle
+    600, 440, 40 * this.lives, 40
+  );
   switch(this.state) {
     case "idle":
       ctx.drawImage(
         // image
         this.spritesheet,
         // source rectangle
-        this.frame * 64, 64, this.width, this.height,
+        this.frame * 64, 80, this.width, this.height,
         // destination rectangle
-        this.x, this.y, this.width, this.height
+        this.x, this.y + 16, this.width, this.height
       );
       break;
 
@@ -699,7 +781,23 @@ Player.prototype.render = function(time, ctx) {
   }
 }
 
-},{}],8:[function(require,module,exports){
+
+/**
+ * @function restart the player object
+ * {}
+ */
+Player.prototype.restart = function(time, entities) {
+  this.x = 4;
+  this.y = 240;
+  this.state = 'idle';
+  this.timer = 0;
+  this.frame = 0;
+  this.pixels_moved = 0;
+  this.lane = 0;
+  this.logSpeed = 0;  
+}
+
+},{}],7:[function(require,module,exports){
 /**
  * @module exports the vehicle class
  */

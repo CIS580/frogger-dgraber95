@@ -11,31 +11,38 @@ const Vehicle = require('./vehicle.js');
  * Creates a new lane object
  * @param {int} laneNum left lane number of this lane (0-3 left to right)
  */
-function Lane(laneNum) {
+function Lane(laneNum, level) {
   this.wait = 1200;
   this.timer = 0;
   this.vehicles = [];
   this.laneNum = laneNum;
   switch(laneNum){
       case 0:
-        this.x = 76;
+        this.x = 74;
         this.speed = Math.random()*0.5 + 0.5;
+        this.vehicles.push(new Vehicle(this, Math.random()*400))
         break;
       case 1:
-        this.x = 146;
-        this.speed = Math.random()*0.4 + 0.75;
+        this.x = 144;
+        this.speed = Math.random()*0.4 + 1;
+        this.vehicles.push(new Vehicle(this, Math.random()*400))        
         break;
       case 2:
-        this.x = 216;
-        this.speed = Math.random()*0.4 + 0.75;
+        this.x = 214;
+        this.speed = Math.random()*0.4 + 1;
+        this.vehicles.push(new Vehicle(this, Math.random()*400))        
         break;        
       case 3:
-        this.x = 286;
+        this.x = 284;
         this.speed = Math.random()*0.5 + 0.5;
+        this.vehicles.push(new Vehicle(this, Math.random()*400))        
         break;
   }
 }
 
+Lane.prototype.increaseSpeed = function() {
+    this.speed += 0.7;
+}
 
 /**
  * @function updates the Lane object
@@ -57,22 +64,18 @@ Lane.prototype.update = function(elapsedTime, entities) {
         if(this.laneNum == 0 || this.laneNum == 1){
             var new_vehicle = new Vehicle(this, -150);
             this.vehicles.push(new_vehicle);
-            entities.addEntity(new_vehicle);
         }
         else{
             var new_vehicle = new Vehicle(this, 480);
             this.vehicles.push(new_vehicle);
-            entities.addEntity(new_vehicle);
         }
     }
 
     for(var i = 0; i < this.vehicles.length; i++){
         this.vehicles[i].update(elapsedTime, this.speed);
-        entities.updateEntity(this.vehicles[i]);
     }
 
     if(this.vehicles.length != 0 && this.vehicles[0].isOffScreen) {
-        entities.removeEntity(this.vehicles[0]);
         this.vehicles.splice(0, 1);
     }
 }

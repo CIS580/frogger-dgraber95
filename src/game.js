@@ -49,7 +49,7 @@ Game.prototype.loop = function(newTime) {
   var elapsedTime = newTime - this.oldTime;
   this.oldTime = newTime;
 
-  if(!this.paused) this.update(elapsedTime);
+  this.update(elapsedTime);
   this.render(elapsedTime, this.frontCtx);
 
   // Flip the back buffer
